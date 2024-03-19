@@ -9,8 +9,8 @@ load_dotenv()
 
 # Database connection configuration
 db_config = {
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
+    'user': 'root',
+    'password': '1234',
     'host': os.getenv('DB_HOST')
 }
 
@@ -18,13 +18,6 @@ db_config = {
 try:
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor()
-
-    # GRANT REFERENCES privilege on 'publishers' table
-    grant_statement = """
-    GRANT REFERENCES ON scraped_news.publishers TO 'newsminerusr'@'%';
-    """
-    cursor.execute(grant_statement)
-    connection.commit()
 
     print("GRANT statement executed successfully.")
 
@@ -39,6 +32,15 @@ finally:
 
 # SQL statements for creating database and tables
 create_statements = [
+    """
+    CREATE USER 'user1'@'%' IDENTIFIED WITH mysql_native_password BY '1234';
+    """,
+    """
+    GRANT ALL PRIVILEGES ON *.* TO 'user1'@'%';
+    """,
+    """
+    FLUSH PRIVILEGES;
+    """,
     """
     CREATE DATABASE IF NOT EXISTS scraped_news_articles;
     """,

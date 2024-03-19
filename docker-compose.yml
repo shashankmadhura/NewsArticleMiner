@@ -8,12 +8,12 @@ services:
     depends_on:
       - mysql
     environment:
-      - DB_USER=root
+      - DB_USER=user1
       - DB_PASSWORD=1234
-      - DB_HOST=127.0.0.1
+      - DB_HOST=mysql
       - DB_NAME=scraped_news_articles
     volumes:
-      - ./NewsArticleMiner:/app
+      - .:/app
     command: python3 pipeline.py
 
   node-backend:
@@ -23,16 +23,16 @@ services:
     depends_on:
       - mysql
     environment:
-      - DB_USER=root
+      - DB_USER=user1
       - DB_PASSWORD=1234
-      - DB_HOST=127.0.0.1
+      - DB_HOST=mysql  # Use 'mysql' instead of '127.0.0.1'
       - DB_NAME=scraped_news_articles
       - PORT=3000
       - LOG_FILE=scraping.log
     ports:
       - "3000:3000"
     volumes:
-      - ./NewsArticleMiner/backend:/app
+      - ./backend:/app  # Mount only the necessary directory containing Node.js code
 
   mysql:
     image: mysql:latest

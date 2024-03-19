@@ -43,6 +43,11 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - %(li
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+# Configure logging for mysql.connector
+# logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger('mysql.connector')
+# logger.setLevel(logging.DEBUG)
+
 
 # MySQL connection pooling configuration
 db_config = {
@@ -51,6 +56,8 @@ db_config = {
     'host': os.getenv('DB_HOST'),
     'database': os.getenv('DB_NAME')
 }
+
+print(db_config)
 pool = mysql.connector.pooling.MySQLConnectionPool(pool_name="mypool", pool_size=10, **db_config)
 
 logger.info("Connected to MySQL")
@@ -78,10 +85,13 @@ def article_exists(cursor, url):
         count = cursor.fetchone()[0]
 
         if count > 0:
+            print(count)
+            print("article already exists")
             logger.info("Skipping the article: Already exists")
 
         return count > 0
     except Exception as e:
+        print(e)
         logger.error(f"Error checking if article exists: {e}")
         return False
 
@@ -89,18 +99,22 @@ def article_exists(cursor, url):
 def scrape_article(cursor, url):
     try:
         config = Config()
-
+        # user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
+        # config.browser_user_agent = user_agent
         # To include binary data while scraping
         # Almost all the article contains binary data
         # If set to false, throws exception if article has binary data
         config.allow_binary_content = True
-
+        print("trying to scrape the article")
         article = Article(url, config=config)
         article.download()
         article.parse()
         if article.download_exception_msg:
+            print("download failed")
             logger.error("Error downloading the article", article.download_exception_msg)
             return None
+
+        print("done scraping the article")
             
         return {
             'title': article.title,
@@ -116,6 +130,7 @@ def scrape_article(cursor, url):
             'publisher': article.meta_site_name,
         }
     except Exception as e:
+        print(e)
         logger.error(f"Error scraping article from {url}: {e}")
         return None
 
@@ -123,6 +138,7 @@ def scrape_article(cursor, url):
 def insert_article_data(cursor, data):
     try:
         # Assuming data['meta_keywords'] is a list
+        print("trying to insert article")
         meta_keywords_json = json.dumps(data['meta_keywords'])
 
         insert_article_query = """
@@ -131,7 +147,7 @@ def insert_article_data(cursor, data):
             VALUES 
             (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-
+        print("data", data)
         cursor.execute(insert_article_query, (
             data['title'], data['text'], data['html'], data['published_date'], data['source_url'],
             data['canonical_link'], json.dumps(data['meta_data']), meta_keywords_json, data['meta_description']
@@ -172,18 +188,36 @@ def insert_article_data(cursor, data):
         # Update article record with publisher_id
         update_article_query = "UPDATE articles SET publisher_id = %s WHERE id = %s"
         cursor.execute(update_article_query, (publisher_id, article_id))
+        print("Done insert article")
 
         # Update hourly summary
         update_hourly_summary(cursor, publisher_id, data['published_date'])
+        print("Done insert hr summary")
+      
 
     except Exception as e:
+        print(e)
         logger.error(f"Error inserting data into database: {e}")
 
 # Function to update hourly summary
 def update_hourly_summary(cursor, publisher_id, publication_date):
     try:
-        # Your logic to update the hourly summary table goes here
-        pass
+        # Check if there is already a record for the publisher in the current hour
+        current_hour = publication_date.replace(minute=0, second=0, microsecond=0)
+        query = "SELECT id, article_count FROM hourly_summary WHERE publisher_id = %s AND publication_hour = %s"
+        cursor.execute(query, (publisher_id, current_hour))
+        result = cursor.fetchone()
+
+        if result:
+            # If a record exists, update the article count
+            summary_id, article_count = result
+            article_count += 1
+            update_query = "UPDATE hourly_summary SET article_count = %s WHERE id = %s"
+            cursor.execute(update_query, (article_count, summary_id))
+        else:
+            # If no record exists, insert a new record
+            insert_query = "INSERT INTO hourly_summary (publisher_id, publication_hour, article_count) VALUES (%s, %s, %s)"
+            cursor.execute(insert_query, (publisher_id, current_hour, 1))
     except Exception as e:
         logger.error(f"Error updating hourly summary: {e}")
 
@@ -197,11 +231,19 @@ def run_pipeline(cursor):
                 scraped_data = scrape_article(cursor, url)
                 if scraped_data:
                     insert_article_data(cursor, scraped_data)
+                    connection.commit()
                     count += 1
     except Exception as e:
+        print(e)
         logger.error(f"Error running pipeline: {e}")
 
-run_pipeline()
+
+
+try:
+    run_pipeline(connection.cursor())
+finally:
+    connection.close()  
+# cur = connection.cursor()
 
 # Initialize the scheduler
 schedule = Scheduler()
