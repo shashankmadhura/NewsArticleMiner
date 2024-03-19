@@ -1,6 +1,16 @@
 version: '3.8'
 
 services:
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: scraped_news_articles
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
   python-app:
     build:
       context: .
@@ -34,15 +44,6 @@ services:
     volumes:
       - ./backend:/app  # Mount only the necessary directory containing Node.js code
 
-  mysql:
-    image: mysql:latest
-    environment:
-      MYSQL_ROOT_PASSWORD: 1234
-      MYSQL_DATABASE: scraped_news_articles
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
 
 volumes:
   mysql-data:
