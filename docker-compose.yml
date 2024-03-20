@@ -32,6 +32,8 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - mysql
+      - python-app
+
     environment:
       - DB_USER=user1
       - DB_PASSWORD=1234

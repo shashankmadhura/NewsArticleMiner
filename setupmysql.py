@@ -10,7 +10,7 @@ load_dotenv()
 # Database connection configuration
 db_config = {
     'user': 'root',
-    'password': '1234',
+    'password': os.getenv('DB_PASSWORD'),
     'host': os.getenv('DB_HOST')
 }
 
