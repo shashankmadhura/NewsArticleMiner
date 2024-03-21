@@ -4,6 +4,5 @@ WORKDIR /app
 
 COPY . .
 
-RUN npm install
+CMD ["./run_backend.sh"]
 
-CMD ["node", "app.js"]

@@ -241,9 +241,9 @@ def run_pipeline(cursor):
 
 try:
     run_pipeline(connection.cursor())
-finally:
-    connection.close()  
-# cur = connection.cursor()
+except Exception as e:
+    logger.error(f"Error running pipeline: {e}")
+    
 
 # Initialize the scheduler
 schedule = Scheduler()

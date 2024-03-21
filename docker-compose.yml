@@ -24,7 +24,6 @@ services:
       - DB_NAME=scraped_news_articles
     volumes:
       - .:/app
-    command: python3 pipeline.py
 
   node-backend:
     build:

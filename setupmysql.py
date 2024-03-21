@@ -33,7 +33,7 @@ finally:
 # SQL statements for creating database and tables
 create_statements = [
     """
-    CREATE USER 'user1'@'%' IDENTIFIED WITH mysql_native_password BY '1234';
+    CREATE USER IF NOT EXISTS 'user1'@'%' IDENTIFIED WITH mysql_native_password BY '1234';
     """,
     """
     GRANT ALL PRIVILEGES ON *.* TO 'user1'@'%';
